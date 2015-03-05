@@ -13,6 +13,7 @@ import ConfigParser
 import email.message
 import os
 import sys
+import re
 import logging
 from optparse import OptionParser
 from HTMLParser import HTMLParser
@@ -103,19 +104,20 @@ def searchnotes(configfile, queryString, stripHtml):
         typ, [ids] = c.search(None, query)
         for id in ids.split():
             typ, data = c.fetch(id, '(BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])')
-            print data[0][1].strip()
-            print "---"
+            note = {}
+            note['subject'] = re.sub(r'^Subject: ', '', data[0][1].strip())
             if stripHtml:
-                print remove_html_tags(data[1][1])
+                note['body'] = re.sub(r'\r\n$', '', remove_html_tags(data[1][1]))
             else:
-                print data[1][1]
+                note['body'] = data[1][1]
+            result.append(note)
     finally:
         try:
             c.close()
         except:
             pass
         c.logout()
-    return
+    return result
 
 
 def createnote(configfile, subject, savehtml):
@@ -195,6 +197,10 @@ def main(argv):
         listnotes(configfile)
     elif options.query is not None:
         searchnotes(configfile, options.query, options.stripHtml)
+        notes = searchnotes(connector, options.query, options.stripHtml)
+        logger.debug('+++ Notes found: %s' % len(notes))
+        for note in notes:
+            logger.info("Subject: %s\n---\n%s" % (note['subject'],note['body']))
     else:
         createnote(configfile, options.subject, options.saveHtml)
 
