@@ -13,13 +13,16 @@ import ConfigParser
 import email.message
 import os
 import sys
+import logging
 from optparse import OptionParser
 from HTMLParser import HTMLParser
 
-global debug
 global configFile
 configFile = '~/inotes.conf'
 
+# Activate NullHandler logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class MLStripper(HTMLParser):
     def __init__(self):
@@ -48,11 +51,11 @@ def connectImap(configFile):
     password = config.get('server', 'password')
 
     # Open an IMAP connection
-    if debug: print '+++ Connecting to', hostname
+    logger.debug('+++ Connecting to %s' % hostname)
     connection = imaplib.IMAP4_SSL(hostname)
 
     # Authenticate
-    if debug: print '+++ Logging in as', username
+    logger.debug('+++ Logging in as %s' % username)
     connection.login(username, password)
     return connection
 
@@ -62,7 +65,7 @@ def countNotes(configFile):
     try:
         typ, data = c.select('Notes', readonly=True)
         nbMsgs = int(data[0])
-        print 'You have %d available notes.' % nbMsgs
+        logger.debug('You have %d available notes.' % nbMsgs)
     finally:
         try:
             c.close()
@@ -123,7 +126,7 @@ def createNote(configFile, subject, savehtml):
         config.read(configFile)
         username = config.get('server', 'username')
 
-        if debug: print "+++ Type your note and exit with CTRL-D"
+        logger.debug("+++ Type your note and exit with CTRL-D")
         if savehtml:
             body = '<html>\n<head></head>\n<body>'
             for line in sys.stdin.readlines():
@@ -151,9 +154,7 @@ def createNote(configFile, subject, savehtml):
 
 
 def main(argv):
-    global debug
     global configFile
-    debug = 0
 
     parser = OptionParser(usage="usage: %prog [options]", version="%prog 1.0")
     parser.add_option('-c', '--config', dest='configFile', type='string',
@@ -161,7 +162,7 @@ def main(argv):
     parser.add_option('-C', '--count', action='store_true', dest='count',
                       help='count the number of notes')
     parser.add_option('-d', '--debug', action='store_true', dest='debug',
-                      help='display this message', default='False')
+                      help='display this message')
     parser.add_option('-H', '--html', action='store_true', dest='saveHtml',
                       help='save the new note in HTML format')
     parser.add_option('-l', '--list', action='store_true', dest='list',
@@ -173,16 +174,20 @@ def main(argv):
     parser.add_option('-S', '--striphtml', action='store_true', dest='stripHtml',
                       help='remove HTML tags from displayed notes')
     (options, args) = parser.parse_args()
+    rootLogger = logging.getLogger()
+    consoleHandler = logging.StreamHandler()
+    rootLogger.addHandler(consoleHandler)
+    rootLogger.setLevel(logging.INFO)
     if options.debug:
-        debug = 1
-        print '+++ Debug mode'
+        rootLogger.setLevel(logging.DEBUG)
+        logger.debug('+++ Debug mode')
     if options.configFile is None:
         if not os.path.isfile(configFile):
             print 'Cannot open ' + configFile + '. Use the -c switch to provide a valid configuration.'
             sys.exit(1)
     else:
         configFile = options.configFile
-    if debug: print '+++ Configuration file:', configFile
+    logger.debug('+++ Configuration file: %s', configFile)
 
     if options.count:
         countNotes(configFile)
