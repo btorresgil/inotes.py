@@ -60,98 +60,64 @@ def connect_imap(configfile):
     return connection
 
 
-def countnotes(configfile):
-    c = connect_imap(configfile)
-    try:
-        typ, data = c.select('Notes', readonly=True)
-        nbMsgs = int(data[0])
-        logger.debug('You have %d available notes.' % nbMsgs)
-    finally:
-        try:
-            c.close()
-        except:
-            pass
-        c.logout()
+def countnotes(connector):
+    typ, data = connector.select('Notes', readonly=True)
+    nbMsgs = int(data[0])
+    logger.debug('You have %d available notes.' % nbMsgs)
     return
 
 
-def listnotes(configfile):
-    c = connect_imap(configfile)
-    try:
-        typ, data = c.select('Notes', readonly=True)
-        typ, [ids] = c.search(None, 'ALL')
-        for id in ids.split():
-            typ, data = c.fetch(id, '(RFC822)')
-            for d in data:
-                if isinstance(d, tuple):
-                    msg = email.message_from_string(d[1])
-                    print msg['subject']
-    finally:
-        try:
-            c.close()
-        except:
-            pass
-        c.logout()
+def listnotes(connector):
+    typ, data = connector.select('Notes', readonly=True)
+    typ, [ids] = connector.search(None, 'ALL')
+    for id in ids.split():
+        typ, data = connector.fetch(id, '(RFC822)')
+        for d in data:
+            if isinstance(d, tuple):
+                msg = email.message_from_string(d[1])
+                print msg['subject']
     return
 
 
-def searchnotes(configfile, queryString, stripHtml):
-    c = connect_imap(configfile)
+def searchnotes(connector, queryString, stripHtml):
     result = []
-    try:
-        typ, data = c.select('Notes', readonly=True)
-        query = '(OR TEXT "%s" SUBJECT "%s")' % (queryString, queryString)
-        typ, [ids] = c.search(None, query)
-        for id in ids.split():
-            typ, data = c.fetch(id, '(BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])')
-            note = {}
-            note['subject'] = re.sub(r'^Subject: ', '', data[0][1].strip())
-            if stripHtml:
-                note['body'] = re.sub(r'\r\n$', '', remove_html_tags(data[1][1]))
-            else:
-                note['body'] = data[1][1]
-            result.append(note)
-    finally:
-        try:
-            c.close()
-        except:
-            pass
-        c.logout()
+    typ, data = connector.select('Notes', readonly=True)
+    query = '(OR TEXT "%s" SUBJECT "%s")' % (queryString, queryString)
+    typ, [ids] = connector.search(None, query)
+    for id in ids.split():
+        typ, data = connector.fetch(id, '(BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])')
+        note = {}
+        note['subject'] = re.sub(r'^Subject: ', '', data[0][1].strip())
+        if stripHtml:
+            note['body'] = re.sub(r'\r\n$', '', remove_html_tags(data[1][1]))
+        else:
+            note['body'] = data[1][1]
+        result.append(note)
     return result
 
 
-def createnote(configfile, subject, savehtml):
-    c = connect_imap(configfile)
-    try:
-        # Read configuration file
-        config = ConfigParser.ConfigParser()
-        config.read(configfile)
-        username = config.get('server', 'username')
+def createnote(connector, configfile, subject, savehtml):
+    # Read configuration file
+    config = ConfigParser.ConfigParser()
+    config.read(configfile)
+    username = config.get('server', 'username')
 
-        logger.debug("+++ Type your note and exit with CTRL-D")
-        if savehtml:
-            body = '<html>\n<head></head>\n<body>'
-            for line in sys.stdin.readlines():
-                body += line
-                body += '<br>'
-            body += '</body></html>'
-        else:
-            body = ''
-            for line in sys.stdin.readlines():
-                body += line
+    logger.debug("+++ Type your note and exit with CTRL-D")
+    if savehtml:
+        body = '<html>\n<head></head>\n<body>'
+        for line in sys.stdin.readlines():
+            body += line
+            body += '<br>'
+        body += '</body></html>'
+    else:
+        body = ''
+        for line in sys.stdin.readlines():
+            body += line
 
-        now = time.strftime('%a, %d %b %Y %H:%M:%S %z')
-        note = "Date: %s\nFrom: %s@me.com\nX-Uniform-Type-Identifier: com.apple.mail-note\nContent-Type: text/html;\nSubject: %s\n\n%s" % (
-        now, username, subject, body)
-        c.append('Notes', '', imaplib.Time2Internaldate(time.time()), str(note))
-
-    finally:
-        try:
-            c.close()
-        except:
-            pass
-        c.logout()
-
+    now = time.strftime('%a, %d %b %Y %H:%M:%S %z')
+    note = "Date: %s\nFrom: %s@me.com\nX-Uniform-Type-Identifier: com.apple.mail-note\nContent-Type: text/html;\nSubject: %s\n\n%s" % (
+    now, username, subject, body)
+    connector.append('Notes', '', imaplib.Time2Internaldate(time.time()), str(note))
     return
 
 
@@ -191,19 +157,25 @@ def main(argv):
         configfile = options.configfile
     logger.debug('+++ Configuration file: %s', configfile)
 
+    connector = connect_imap(configfile)
+
     if options.count:
-        countnotes(configfile)
+        countnotes(connector)
     elif options.list:
-        listnotes(configfile)
+        listnotes(connector)
     elif options.query is not None:
-        searchnotes(configfile, options.query, options.stripHtml)
         notes = searchnotes(connector, options.query, options.stripHtml)
         logger.debug('+++ Notes found: %s' % len(notes))
         for note in notes:
             logger.info("Subject: %s\n---\n%s" % (note['subject'],note['body']))
     else:
-        createnote(configfile, options.subject, options.saveHtml)
+        createnote(connector, configfile, options.subject, options.saveHtml)
 
+    try:
+        connector.close()
+    except:
+        pass
+    connector.logout()
 
 if __name__ == '__main__':
     main(sys.argv[1:])
