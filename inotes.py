@@ -17,8 +17,7 @@ import logging
 from optparse import OptionParser
 from HTMLParser import HTMLParser
 
-global configFile
-configFile = '~/inotes.conf'
+defaultConfigFile = '~/inotes.conf'
 
 # Activate NullHandler logger
 logger = logging.getLogger(__name__)
@@ -36,16 +35,16 @@ class MLStripper(HTMLParser):
         return ''.join(self.fed)
 
 
-def removeHTMLTags(html):
+def remove_html_tags(html):
     s = MLStripper()
     s.feed(html)
     return s.get_data()
 
 
-def connectImap(configFile):
+def connect_imap(configfile):
     # Read configuration file
     config = ConfigParser.ConfigParser()
-    config.read(configFile)
+    config.read(configfile)
     hostname = config.get('server', 'hostname')
     username = config.get('server', 'username')
     password = config.get('server', 'password')
@@ -60,8 +59,8 @@ def connectImap(configFile):
     return connection
 
 
-def countNotes(configFile):
-    c = connectImap(configFile)
+def countnotes(configfile):
+    c = connect_imap(configfile)
     try:
         typ, data = c.select('Notes', readonly=True)
         nbMsgs = int(data[0])
@@ -75,8 +74,8 @@ def countNotes(configFile):
     return
 
 
-def listNotes(configFile):
-    c = connectImap(configFile)
+def listnotes(configfile):
+    c = connect_imap(configfile)
     try:
         typ, data = c.select('Notes', readonly=True)
         typ, [ids] = c.search(None, 'ALL')
@@ -95,8 +94,9 @@ def listNotes(configFile):
     return
 
 
-def searchNotes(configFile, queryString, stripHtml):
-    c = connectImap(configFile)
+def searchnotes(configfile, queryString, stripHtml):
+    c = connect_imap(configfile)
+    result = []
     try:
         typ, data = c.select('Notes', readonly=True)
         query = '(OR TEXT "%s" SUBJECT "%s")' % (queryString, queryString)
@@ -106,7 +106,7 @@ def searchNotes(configFile, queryString, stripHtml):
             print data[0][1].strip()
             print "---"
             if stripHtml:
-                print removeHTMLTags(data[1][1])
+                print remove_html_tags(data[1][1])
             else:
                 print data[1][1]
     finally:
@@ -118,12 +118,12 @@ def searchNotes(configFile, queryString, stripHtml):
     return
 
 
-def createNote(configFile, subject, savehtml):
-    c = connectImap(configFile)
+def createnote(configfile, subject, savehtml):
+    c = connect_imap(configfile)
     try:
         # Read configuration file
         config = ConfigParser.ConfigParser()
-        config.read(configFile)
+        config.read(configfile)
         username = config.get('server', 'username')
 
         logger.debug("+++ Type your note and exit with CTRL-D")
@@ -154,10 +154,9 @@ def createNote(configFile, subject, savehtml):
 
 
 def main(argv):
-    global configFile
 
     parser = OptionParser(usage="usage: %prog [options]", version="%prog 1.0")
-    parser.add_option('-c', '--config', dest='configFile', type='string',
+    parser.add_option('-c', '--config', dest='configfile', type='string',
                       help='specify the configuration file')
     parser.add_option('-C', '--count', action='store_true', dest='count',
                       help='count the number of notes')
@@ -181,22 +180,23 @@ def main(argv):
     if options.debug:
         rootLogger.setLevel(logging.DEBUG)
         logger.debug('+++ Debug mode')
-    if options.configFile is None:
-        if not os.path.isfile(configFile):
-            print 'Cannot open ' + configFile + '. Use the -c switch to provide a valid configuration.'
+    if options.configfile is None:
+        if not os.path.isfile(defaultConfigFile):
+            print 'Cannot open ' + defaultConfigFile + '. Use the -c switch to provide a valid configuration.'
             sys.exit(1)
+        configfile = defaultConfigFile
     else:
-        configFile = options.configFile
-    logger.debug('+++ Configuration file: %s', configFile)
+        configfile = options.configfile
+    logger.debug('+++ Configuration file: %s', configfile)
 
     if options.count:
-        countNotes(configFile)
+        countnotes(configfile)
     elif options.list:
-        listNotes(configFile)
+        listnotes(configfile)
     elif options.query is not None:
-        searchNotes(configFile, options.query, options.stripHtml)
+        searchnotes(configfile, options.query, options.stripHtml)
     else:
-        createNote(configFile, options.subject, options.saveHtml)
+        createnote(configfile, options.subject, options.saveHtml)
 
 
 if __name__ == '__main__':
