@@ -45,9 +45,9 @@ def connect_imap(configfile):
     # Read configuration file
     config = ConfigParser.ConfigParser()
     config.read(configfile)
-    hostname = config.get('server', 'hostname')
-    username = config.get('server', 'username')
-    password = config.get('server', 'password')
+    hostname = config.get('icloud', 'hostname')
+    username = config.get('icloud', 'username')
+    password = config.get('icloud', 'password')
 
     # Open an IMAP connection
     logger.debug('+++ Connecting to %s' % hostname)
