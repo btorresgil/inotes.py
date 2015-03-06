@@ -20,7 +20,7 @@ import logging
 from optparse import OptionParser
 from HTMLParser import HTMLParser
 
-defaultConfigFile = '~/inotes.conf'
+defaultConfigFile = os.path.expanduser('~/inotes.conf')
 
 # Activate NullHandler logger
 logger = logging.getLogger(__name__)
