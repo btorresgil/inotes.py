@@ -64,9 +64,8 @@ def connect_imap(configfile):
 
 def countnotes(connector):
     typ, data = connector.select('Notes', readonly=True)
-    nbMsgs = int(data[0])
-    logger.debug('You have %d available notes.' % nbMsgs)
-    return
+    count = int(data[0])
+    return count
 
 
 def listnotes(connector):
@@ -162,12 +161,13 @@ def main(argv):
     connector = connect_imap(configfile)
 
     if options.count:
-        countnotes(connector)
+        count = countnotes(connector)
+        logger.debug('++ Found %s notes.' % count)
     elif options.list:
         listnotes(connector)
     elif options.query is not None:
         notes = searchnotes(connector, options.query, options.stripHtml)
-        logger.debug('+++ Notes found: %s' % len(notes))
+        logger.debug('+++ Notes matching query: %s' % len(notes))
         for note in notes:
             logger.info("Subject: %s\n---\n%s" % (note['subject'],note['body']))
     else:
