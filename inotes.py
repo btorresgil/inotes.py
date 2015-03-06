@@ -1,8 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # iNotes.py - an Apple iCloud client for Python environments
 #
-# Author: Xavier Mertens <xavier@rootshell.be>
+# Author: Brian Torres-Gil <brian@bonsaibay.net>
+#
+# Original author: Xavier Mertens <xavier@rootshell.be>
 # Copyright: GPLv3 (http://gplv3.fsf.org/)
 # Feel free to use the code, but please share the changes you've made
 # 
