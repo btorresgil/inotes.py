@@ -98,7 +98,7 @@ def searchnotes(connector, queryString, stripHtml):
         note = {}
         note['subject'] = re.sub(r'^Subject: ', '', data[0][1].strip())
         if stripHtml:
-            note['body'] = re.sub(r'\r\n$', '', remove_html_tags(data[1][1]))
+            note['body'] = remove_html_tags(data[1][1].strip())
         else:
             note['body'] = data[1][1]
         result.append(note)
