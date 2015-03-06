@@ -62,6 +62,14 @@ def connect_imap(configfile):
     return connection
 
 
+def close_imap(connector):
+    try:
+        connector.close()
+    except:
+        pass
+    connector.logout()
+
+
 def countnotes(connector):
     typ, data = connector.select('Notes', readonly=True)
     count = int(data[0])
@@ -173,11 +181,7 @@ def main(argv):
     else:
         createnote(connector, configfile, options.subject, options.saveHtml)
 
-    try:
-        connector.close()
-    except:
-        pass
-    connector.logout()
+    close_imap(connector)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
