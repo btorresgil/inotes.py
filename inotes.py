@@ -106,6 +106,17 @@ def searchnotes(connector, queryString, stripHtml):
     return result
 
 
+def deletenotes(connector, ids):
+    typ, data = connector.select('Notes', readonly=False)
+    for id in ids:
+        logger.debug("Set delete flag for note %s" % (id,))
+        typ, data = connector.store(id, '+FLAGS', '\\Deleted')
+        logger.debug(data)
+    logger.debug("Expunge Notes")
+    typ, data = connector.expunge()
+    logger.debug(data)
+
+
 def createnote(connector, configfile, subject, savehtml):
     # Read configuration file
     config = ConfigParser.ConfigParser()
