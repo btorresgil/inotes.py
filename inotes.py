@@ -96,6 +96,7 @@ def searchnotes(connector, queryString, stripHtml):
     for id in ids.split():
         typ, data = connector.fetch(id, '(BODY[HEADER.FIELDS (SUBJECT)] BODY[TEXT])')
         note = {}
+        note['id'] = id
         note['subject'] = re.sub(r'^Subject: ', '', data[0][1].strip())
         if stripHtml:
             note['body'] = remove_html_tags(data[1][1].strip())
